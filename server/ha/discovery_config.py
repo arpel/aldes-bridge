@@ -10,18 +10,31 @@ from .mode_mappings import (
 
 _log = logging.getLogger("aldes-ha-discovery")
 
+_AIR_MODE_CODES = ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
+_COOLING_CODES = frozenset({"F", "G", "H", "I"})
+
+
+def _air_mode_code(data):
+    raw = data.get("UAM", "") if data else ""
+    try:
+        index = int(float(raw))
+    except (TypeError, ValueError):
+        return str(raw).strip().upper()
+    if 0 <= index < len(_AIR_MODE_CODES):
+        return _AIR_MODE_CODES[index]
+    return ""
+
 
 def _get_min_max(data):
     if data is None:
         return 5, 30
-    air_mode = str(data.get("UAM", ""))
-    is_cooling = air_mode in ("F",)
+    is_cooling = _air_mode_code(data) in _COOLING_CODES
     if is_cooling:
-        mi = safe_float(data.get("CMiST"))
-        ma = safe_float(data.get("CMaST"))
-    else:
         mi = safe_float(data.get("FMiST"))
         ma = safe_float(data.get("FMaST"))
+    else:
+        mi = safe_float(data.get("CMiST"))
+        ma = safe_float(data.get("CMaST"))
     if mi is None:
         mi = min(
             safe_float(data.get("CMiST")) or 5,
