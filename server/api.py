@@ -28,9 +28,9 @@ def create_app(state, engine, web_dir):
     web_dir = os.path.abspath(web_dir)
     state.ui_version = read_ui_version(web_dir)
 
-    # Expose state/engine aux routers via request.app.extra
-    app.extra["state"] = state
-    app.extra["engine"] = engine
+    # Expose state/engine aux routers via request.app.state
+    app.state.state = state
+    app.state.engine = engine
 
     @app.on_event("startup")
     async def _startup():
@@ -49,7 +49,7 @@ def create_app(state, engine, web_dir):
     @app.get("/api/health")
     def api_health(request: Request):
         """Endpoint detaille pour diagnostics orchestration."""
-        st = request.app.extra["state"]
+        st = request.app.state.state
         ha_client = getattr(st, "_ha_client", None)
         mqtt_connected = ha_client._sock is not None if ha_client else None
         box_connected = st.connected
