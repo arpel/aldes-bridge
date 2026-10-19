@@ -123,11 +123,11 @@ Then('le titre de la page est {texte}', async ({ page }, title: string) => {
 })
 
 Then('la barre de statut affiche {texte}', async ({ page }, text: string) => {
-  await expect(page.getByText(text, { exact: false })).toBeVisible({ timeout: 10000 })
+  await expect(page.getByTestId('status-mode')).toHaveText(text, { timeout: 10000 })
 })
 
 Then('la barre de statut affiche toujours {texte}', async ({ page }, text: string) => {
-  await expect(page.getByText(text, { exact: false })).toBeVisible({ timeout: 10000 })
+  await expect(page.getByTestId('status-mode')).toHaveText(text, { timeout: 10000 })
 })
 
 Then('le sélecteur de mode propose {texte}', async ({ page }, mode: string) => {

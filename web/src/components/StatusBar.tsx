@@ -40,7 +40,7 @@ export default function StatusBar({ config, sseAlive, onMode, onDisconnect }: Pr
       {/* Left: mode + status */}
       <div className={styles.left}>
         <span className={styles.dot + (mode ? ' ' + (styles[mode] ?? '') : '')} />
-        <span className={styles.modeLabel}>{mode ?? '—'}</span>
+        <span className={styles.modeLabel} data-testid="status-mode">{mode ?? '—'}</span>
         <span className={styles.sep}>·</span>
         {connected ? (
           <span className={styles.ok}>
