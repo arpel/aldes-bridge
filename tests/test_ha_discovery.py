@@ -21,6 +21,7 @@ from server.ha.mode_mappings import (
     HA_WATER_TO_ALDES,
 )
 from server.ha.discovery_config import build_discovery_config as _build_discovery_config
+from server.ha.discovery_config import _get_min_max, _air_mode_code
 
 
 # --- Tests des mappings ---
@@ -105,6 +106,83 @@ def test_build_discovery_config_climate_valid():
     assert climate_payload["precision"] == 0.1
     assert climate_payload["temp_step"] == 1
     assert "availability_topic" in climate_payload
+
+
+# --- Tests bornes min/max selon le mode (issue #64) ---
+
+def test_air_mode_code_numeric_to_letter():
+    assert _air_mode_code({"UAM": 0}) == "A"
+    assert _air_mode_code({"UAM": 1}) == "B"
+    assert _air_mode_code({"UAM": 5}) == "F"
+    assert _air_mode_code({"UAM": 8}) == "I"
+    assert _air_mode_code({"UAM": "5"}) == "F"
+    assert _air_mode_code({"UAM": 9}) == ""
+    assert _air_mode_code({"UAM": -1}) == ""
+    assert _air_mode_code({}) == ""
+    assert _air_mode_code(None) == ""
+    assert _air_mode_code({"UAM": "F"}) == "F"
+
+
+def test_get_min_max_heating_uses_cm_bounds():
+    data = {"UAM": 1, "CMiST": 10, "CMaST": 28, "FMiST": 22, "FMaST": 31}
+    assert _get_min_max(data) == (10, 28)
+
+
+def test_get_min_max_cooling_uses_fm_bounds():
+    data = {"UAM": 5, "CMiST": 10, "CMaST": 28, "FMiST": 22, "FMaST": 31}
+    assert _get_min_max(data) == (22, 31)
+
+
+def test_get_min_max_cooling_boost_uses_fm_bounds():
+    data = {"UAM": 6, "CMiST": 10, "CMaST": 28, "FMiST": 22, "FMaST": 31}
+    assert _get_min_max(data) == (22, 31)
+
+
+def test_get_min_max_off_defaults_to_heating():
+    data = {"UAM": 0, "CMiST": 10, "CMaST": 28, "FMiST": 22, "FMaST": 31}
+    assert _get_min_max(data) == (10, 28)
+
+
+def test_get_min_max_none_fallback():
+    assert _get_min_max(None) == (5, 30)
+
+
+def test_get_min_max_missing_bounds_fallback():
+    data = {"UAM": 1}
+    assert _get_min_max(data) == (5, 30)
+
+
+def test_get_min_max_partial_missing_fallback():
+    data = {"UAM": 1, "CMiST": 10}
+    mi, ma = _get_min_max(data)
+    assert mi == 10
+    assert ma == 30
+
+
+def test_build_discovery_climate_min_max_heat():
+    data = {"UAM": 1, "CMiST": 10, "CMaST": 28, "FMiST": 22, "FMaST": 31}
+    configs = _build_discovery_config("dev1", None, data=data)
+    for topic, payload in configs:
+        if "climate" in topic and payload:
+            cfg = json.loads(payload)
+            assert cfg["min_temp"] == 10
+            assert cfg["max_temp"] == 28
+            break
+    else:
+        raise AssertionError("config climate non trouvee")
+
+
+def test_build_discovery_climate_min_max_cool():
+    data = {"UAM": 5, "CMiST": 10, "CMaST": 28, "FMiST": 22, "FMaST": 31}
+    configs = _build_discovery_config("dev1", None, data=data)
+    for topic, payload in configs:
+        if "climate" in topic and payload:
+            cfg = json.loads(payload)
+            assert cfg["min_temp"] == 22
+            assert cfg["max_temp"] == 31
+            break
+    else:
+        raise AssertionError("config climate non trouvee")
 
 
 def test_build_discovery_config_device_info():
