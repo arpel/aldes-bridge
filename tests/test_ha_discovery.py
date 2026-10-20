@@ -1021,3 +1021,101 @@ def test_health_uptime_value():
     payloads = b"".join(published).decode("utf-8", errors="replace")
     assert "aldes/health/uptime" in payloads
     assert "100" in payloads
+
+
+# --- Tests entité "Nombre de personnes" (issue #66) ---
+
+def _spy_build_publish(monkeypatch):
+    from server import mqtt
+    published = []
+    real_build_publish = mqtt.build_publish
+
+    def spy(topic, payload, **kwargs):
+        published.append((topic, str(payload)))
+        return real_build_publish(topic, payload, **kwargs)
+
+    monkeypatch.setattr(mqtt, "build_publish", spy)
+    return published
+
+
+def _people_client(monkeypatch):
+    events = EventBus()
+    state = AppState("127.0.0.1", 8883, events)
+    state.profile = load_profile("tone-aquaair")
+    injected = []
+    state._ha_inject_hook = lambda topic, payload, qos: injected.append(json.loads(payload))
+    client = HADiscoveryClient(state, dry_run=False)
+    return client, injected, _spy_build_publish(monkeypatch)
+
+
+def test_build_discovery_config_people_min_max():
+    configs = _build_discovery_config("dev123", None)
+    for topic, payload_str in configs:
+        if "number/aldes_people" in topic:
+            payload = json.loads(payload_str)
+            assert payload["name"] == "Nombre de personnes"
+            assert payload["unique_id"] == "aldes_dev123_people"
+            assert payload["state_topic"] == "aldes/state/people"
+            assert payload["command_topic"] == "aldes/set/people"
+            assert payload["min"] == 2
+            assert payload["max"] == 6
+            assert payload["step"] == 1
+            return
+    pytest.fail("people number config non trouvée")
+
+
+def test_people_command_converts_count_to_index(monkeypatch):
+    client, injected, published = _people_client(monkeypatch)
+
+    client._handle_people_command("2")
+    assert injected == [
+        {"id": 1, "jsonrpc": "2.0", "method": "changePeople", "params": ["0"]}
+    ]
+    assert ("aldes/state/people", "2") in published
+
+    client._handle_people_command("6")
+    assert injected[-1]["params"] == ["4"]
+    assert ("aldes/state/people", "6") in published
+
+
+def test_people_command_clamps_out_of_range(monkeypatch):
+    client, injected, published = _people_client(monkeypatch)
+
+    client._handle_people_command("9")
+    assert injected[-1]["params"] == ["4"]
+    assert ("aldes/state/people", "6") in published
+
+    client._handle_people_command("-1")
+    assert injected[-1]["params"] == ["0"]
+    assert ("aldes/state/people", "2") in published
+
+
+def test_people_command_invalid_payload(monkeypatch):
+    client, injected, published = _people_client(monkeypatch)
+
+    client._handle_people_command("abc")
+
+    assert injected == []
+    assert published == []
+
+
+def test_publish_telemetry_people_count(monkeypatch):
+    events = EventBus()
+    state = AppState("127.0.0.1", 8883, events)
+    client = HADiscoveryClient(state)
+    published = _spy_build_publish(monkeypatch)
+
+    client._publish_telemetry_data({"NpiH": "0"})
+    assert ("aldes/state/people", "2") in published
+
+    published.clear()
+    client._publish_telemetry_data({"NpiH": "4"})
+    assert ("aldes/state/people", "6") in published
+
+    published.clear()
+    client._publish_telemetry_data({"NpiH": "9"})
+    assert ("aldes/state/people", "6") in published
+
+    published.clear()
+    client._publish_telemetry_data({"NpiH": "abc"})
+    assert ("aldes/state/people", "2") in published

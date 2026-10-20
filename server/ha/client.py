@@ -349,14 +349,14 @@ class HADiscoveryClient(threading.Thread):
 
     def _handle_people_command(self, payload):
         try:
-            idx = int(payload)
+            count = int(payload)
         except (ValueError, TypeError):
-            _log.warning("ha-discovery: people index invalide: %s", payload)
+            _log.warning("ha-discovery: people nombre invalide: %s", payload)
             return
-        idx = max(0, min(4, idx))
+        idx = max(0, min(4, count - 2))
         self._inject_aldes_command("changePeople", [str(idx)])
         self._safe_send(mqtt.build_publish(
-            f"{self.prefix}/state/people", str(idx), qos=1, retain=True
+            f"{self.prefix}/state/people", str(idx + 2), qos=1, retain=True
         ))
         _log.info("ha-discovery: people -> index %d (%d personnes)", idx, idx + 2)
 
@@ -547,7 +547,7 @@ class HADiscoveryClient(threading.Thread):
             except (ValueError, TypeError):
                 people_idx = 0
             self._safe_send(mqtt.build_publish(
-                f"{self.prefix}/state/people", str(people_idx), qos=1, retain=True
+                f"{self.prefix}/state/people", str(people_idx + 2), qos=1, retain=True
             ))
 
         tbb = safe_float(data.get("TBBa"))
