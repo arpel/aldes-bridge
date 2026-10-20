@@ -31,7 +31,11 @@ def test_ui_version_matches_backend():
 
 
 def test_addon_version_matches_backend():
-    config = os.path.join(ADDON_ROOT, "aldes-bridge-beta", "config.yaml")
+    if "-beta" in __version__:
+        config = os.path.join(ADDON_ROOT, "aldes-bridge-beta", "config.yaml")
+    else:
+        config = os.path.join(ADDON_ROOT, "aldes-bridge", "config.yaml")
+
     if not os.path.isfile(config):
         pytest.skip("repo aldes-haos-addons absent")
 
