@@ -283,9 +283,13 @@ class HADiscoveryClient(threading.Thread):
     def _handle_preset_command(self, payload):
         preset = payload.strip()
         profile = getattr(self.state, "profile", None)
-        aldes_code = profile_code_for_label(
-            profile, ["air_modes_clim", "air_modes_heat"], preset, HA_PRESET_TO_ALDES
-        )
+        if self._last_mode == "cool":
+            fields = ["air_modes_clim", "air_modes_heat"]
+        elif self._last_mode == "heat":
+            fields = ["air_modes_heat", "air_modes_clim"]
+        else:
+            fields = ["air_modes_clim", "air_modes_heat"]
+        aldes_code = profile_code_for_label(profile, fields, preset, HA_PRESET_TO_ALDES)
         if not aldes_code:
             _log.warning("ha-discovery: preset inconnu: %s", preset)
             return

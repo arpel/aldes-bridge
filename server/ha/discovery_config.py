@@ -12,6 +12,7 @@ _log = logging.getLogger("aldes-ha-discovery")
 
 _AIR_MODE_CODES = ["A", "B", "C", "D", "E", "F", "G", "H", "I"]
 _COOLING_CODES = frozenset({"F", "G", "H", "I"})
+_HEATING_CODES = frozenset({"B", "C", "D", "E"})
 
 
 def _air_mode_code(data):
@@ -23,6 +24,22 @@ def _air_mode_code(data):
     if 0 <= index < len(_AIR_MODE_CODES):
         return _AIR_MODE_CODES[index]
     return ""
+
+
+def _filter_air_programs(clim_labels, heat_labels, air_code):
+    """Retourne les presets air selon la famille active (issue #67).
+
+    clim (F-I) → uniquement les presets clim, heat (B-E) → uniquement les
+    presets chauffage, off (A) ou inconnu → union des deux (permet de
+    choisir une famille depuis HA).
+    """
+    if air_code in _COOLING_CODES:
+        selected = clim_labels
+    elif air_code in _HEATING_CODES:
+        selected = heat_labels
+    else:
+        selected = clim_labels + heat_labels
+    return list(dict.fromkeys(selected))
 
 
 def _get_min_max(data):
@@ -84,7 +101,7 @@ def build_discovery_config(device_id, profile, prefix="aldes", data=None,
     active_zones = detect_active_zones(data)
     air_programs_clim = profile_mode_labels(profile, "air_modes_clim", ALDES_TO_HA_PRESET)
     air_programs_heat = profile_mode_labels(profile, "air_modes_heat", ALDES_TO_HA_PRESET)
-    air_programs = list(dict.fromkeys(air_programs_clim + air_programs_heat))
+    air_programs = _filter_air_programs(air_programs_clim, air_programs_heat, _air_mode_code(data))
     water_programs = profile_mode_labels(profile, "water_modes", ALDES_WATER_TO_HA)
 
     ha_entities = (profile.ha_discovery.get("entities", {}) if profile else {}) or {}

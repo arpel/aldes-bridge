@@ -108,6 +108,67 @@ def test_build_discovery_config_climate_valid():
     assert "availability_topic" in climate_payload
 
 
+# --- Tests filtrage presets par famille (issue #67) ---
+
+def test_build_discovery_presets_filtered_cooling():
+    profile = load_profile("tone-aquaair")
+    configs = _build_discovery_config("dev123", profile, data={"UAM": 5})
+    for topic, payload_str in configs:
+        if "climate" in topic and payload_str:
+            payload = json.loads(payload_str)
+            assert payload["preset_modes"] == [
+                "Off", "Confort", "Boost", "Programme C", "Programme D",
+            ]
+            return
+    pytest.fail("climate config non trouvée")
+
+
+def test_build_discovery_presets_filtered_heating():
+    profile = load_profile("tone-aquaair")
+    configs = _build_discovery_config("dev123", profile, data={"UAM": 1})
+    for topic, payload_str in configs:
+        if "climate" in topic and payload_str:
+            payload = json.loads(payload_str)
+            assert payload["preset_modes"] == [
+                "Off", "Confort", "Éco", "Programme A", "Programme B",
+            ]
+            return
+    pytest.fail("climate config non trouvée")
+
+
+def test_build_discovery_presets_union_when_off():
+    profile = load_profile("tone-aquaair")
+    configs = _build_discovery_config("dev123", profile, data={"UAM": 0})
+    for topic, payload_str in configs:
+        if "climate" in topic and payload_str:
+            payload = json.loads(payload_str)
+            assert payload["preset_modes"] == [
+                "Off", "Confort", "Boost", "Programme C", "Programme D",
+                "Éco", "Programme A", "Programme B",
+            ]
+            return
+    pytest.fail("climate config non trouvée")
+
+
+def test_preset_confort_resolves_by_current_family():
+    events = EventBus()
+    state = AppState("127.0.0.1", 8883, events)
+    state.profile = load_profile("tone-aquaair")
+    injected = []
+    state._ha_inject_hook = lambda topic, payload, qos: injected.append(json.loads(payload))
+    client = HADiscoveryClient(state, dry_run=False)
+
+    client._last_mode = "heat"
+    client._handle_preset_command("Confort")
+    client._last_mode = "cool"
+    client._handle_preset_command("Confort")
+
+    assert injected == [
+        {"id": 1, "jsonrpc": "2.0", "method": "changeMode", "params": ["B"]},
+        {"id": 1, "jsonrpc": "2.0", "method": "changeMode", "params": ["F"]},
+    ]
+
+
 # --- Tests bornes min/max selon le mode (issue #64) ---
 
 def test_air_mode_code_numeric_to_letter():
