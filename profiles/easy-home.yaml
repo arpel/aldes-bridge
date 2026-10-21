@@ -1,0 +1,18 @@
+# Profil device : EASY Home
+id: easy-home
+name: "EASY Home"
+description: "VMC simple flux EASY Home"
+type: vmc
+
+telemetry:
+  modemid: product.modem
+  productid: product.serial_number
+
+# Unites deduites des valeurs observees, pas d'une documentation Aldes.
+ha_discovery:
+  # Selecting Holidays starts a bounded window; another mode cancels it.
+  holiday_duration_hours: 24
+  entities:
+    sensors:
+      - { key: HrCuCo, name: "Humidité Cuisine", unit: "%", device_class: humidity }
+      - { key: TmpCu, name: "Température Cuisine", unit: "°C", device_class: temperature }
