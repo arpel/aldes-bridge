@@ -133,7 +133,8 @@ class DeviceProfile:
         }
 
 
-DEFAULT_PROFILE_ID = "tone-aquaair"
+#DEFAULT_PROFILE_ID = "tone-aquaair"
+DEFAULT_PROFILE_ID = "easy-home"
 
 
 def load_profile(profile_id=None, profiles_dir=None):

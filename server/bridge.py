@@ -81,6 +81,9 @@ class BridgeHandler(MQTTEndpoint):
 
     # --- protocole ---
     def _handle(self, ptype, flags, body):
+        # log 1st ... everything
+        _log.debug("RAW: <-- PUBLISH ptype=%s flags=%s body=%s", ptype, flags, body)
+
         if ptype == PT_CONNECT:
             info = emit_connect(self.state, body)
             keepalive = info.get("keepalive", 0)

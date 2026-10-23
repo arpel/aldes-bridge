@@ -8,6 +8,19 @@ telemetry:
   modemid: product.modem
   productid: product.serial_number
 
+air_modes:
+  - { index: 0, code: "V", label: "Daily" }
+  - { index: 1, code: "W", label: "Holidays" }
+  - { index: 2, code: "X", label: "Guest" }
+  - { index: 3, code: "Y", label: "Boost" }
+  - { index: 4, code: "Z", label: "Air Prog" }
+
+ui:
+  show_thermostats: false
+  show_vacations: false
+  show_people: false
+  show_hot_water: false
+
 # Unites deduites des valeurs observees, pas d'une documentation Aldes.
 ha_discovery:
   # Selecting Holidays starts a bounded window; another mode cancels it.
@@ -16,3 +29,16 @@ ha_discovery:
     sensors:
       - { key: HrCuCo, name: "Humidité Cuisine", unit: "%", device_class: humidity }
       - { key: TmpCu, name: "Température Cuisine", unit: "°C", device_class: temperature }
+      # Champs bruts non documentes, exposes en diagnostic.
+      - { key: modemid, name: "modemid", entity_category: diagnostic }
+      - { key: productid, name: "productid", entity_category: diagnostic }
+      - { key: Vers_W, name: "Vers_W", entity_category: diagnostic }
+      - { key: Vers_UC, name: "Vers_UC", entity_category: diagnostic }
+      - { key: RSSI, name: "RSSI", entity_category: diagnostic, value_template: "{{ 'unknown' if value in ['', '--%%'] else value }}" }
+      - { key: dep_ind, name: "dep_ind", entity_category: diagnostic }
+      - { key: cve_csn, name: "cve_csn", entity_category: diagnostic }
+      - { key: vi_csn, name: "vi_csn", entity_category: diagnostic }
+      - { key: tte_csn, name: "tte_csn", entity_category: diagnostic }
+      - { key: dtb_ind, name: "dtb_ind", entity_category: diagnostic }
+      - { key: Start_date_mode, name: "Start_date_mode", entity_category: diagnostic, value_template: "{{ 'unknown' if value in ['', '--%%'] else value }}" }
+      - { key: End_date_mode, name: "End_date_mode", entity_category: diagnostic, value_template: "{{ 'unknown' if value in ['', '--%%'] else value }}" }
