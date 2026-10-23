@@ -288,7 +288,7 @@ def main(argv=None):
 
     from .api import create_app
     app = create_app(state, engine, args.web_dir)
-    config = uvicorn.Config(app, host=args.bind, port=args.web_port, log_level="info", timeout_graceful_shutdown=5)
+    config = uvicorn.Config(app, host=args.bind, port=args.web_port, log_level="debug", timeout_graceful_shutdown=5)
     server = uvicorn.Server(config)
     server.run()
 
