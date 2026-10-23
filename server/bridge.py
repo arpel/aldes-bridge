@@ -93,7 +93,9 @@ class BridgeHandler(MQTTEndpoint):
 
         if ptype == PT_CONNECT:
             info = emit_connect(self.state, body)
+            _log.debug("PT_CONNECT: info=%s", info)
             keepalive = info.get("keepalive", 0)
+            _log.debug("PT_CONNECT: keepalive=%s", keepalive)
             if keepalive > 0:
                 self.sock.settimeout(keepalive * 1.5)
             self._send(build_connack(0))
