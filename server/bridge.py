@@ -32,9 +32,13 @@ class BridgeHandler(MQTTEndpoint):
     def run(self):
         reader = MQTTReader(self.sock)
         while not self._closed:
+            _log.debug("RAW-RUN: Sock ...")
             try:
+                _log.debug("RAW-RUN: Read packet")
                 packet = reader.read_packet()
+                _log.debug("RAW-RUN: packet=%s", packet)
             except socket.timeout:
+                _log.debug("RAW-RUN: Sock timeout")
                 self.state.events.publish({
                     "kind": "status",
                     "ts": "now",
@@ -43,10 +47,13 @@ class BridgeHandler(MQTTEndpoint):
                 })
                 break
             except MQTTError:
+                _log.debug("RAW-RUN: MQTTError")
                 break
             except OSError:
+                _log.debug("RAW-RUN: OSError")
                 break
             if packet is None:
+                _log.debug("RAW-RUN: packet is none")
                 break
             ptype, flags, body, _raw = packet
             try:
@@ -82,7 +89,7 @@ class BridgeHandler(MQTTEndpoint):
     # --- protocole ---
     def _handle(self, ptype, flags, body):
         # log 1st ... everything
-        _log.debug("RAW: <-- PUBLISH ptype=%s flags=%s body=%s", ptype, flags, body)
+        _log.debug("RAW-HANDLE: <-- PUBLISH ptype=%s flags=%s body=%s", ptype, flags, body)
 
         if ptype == PT_CONNECT:
             info = emit_connect(self.state, body)
