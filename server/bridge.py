@@ -17,7 +17,6 @@ from .appstate import emit_message, emit_connect, MQTTEndpoint
 
 _log = logging.getLogger("aldes-bridge-mode")
 
-
 class BridgeHandler(MQTTEndpoint):
     def __init__(self, state, sock, addr, session=None):
         self.state = state
@@ -32,13 +31,9 @@ class BridgeHandler(MQTTEndpoint):
     def run(self):
         reader = MQTTReader(self.sock)
         while not self._closed:
-            _log.debug("RAW-RUN: Sock ...")
             try:
-                _log.debug("RAW-RUN: Read packet")
                 packet = reader.read_packet()
-                _log.debug("RAW-RUN: packet=%s", packet)
             except socket.timeout:
-                _log.debug("RAW-RUN: Sock timeout")
                 self.state.events.publish({
                     "kind": "status",
                     "ts": "now",
@@ -47,13 +42,10 @@ class BridgeHandler(MQTTEndpoint):
                 })
                 break
             except MQTTError:
-                _log.debug("RAW-RUN: MQTTError")
                 break
             except OSError:
-                _log.debug("RAW-RUN: OSError")
                 break
             if packet is None:
-                _log.debug("RAW-RUN: packet is none")
                 break
             ptype, flags, body, _raw = packet
             try:
@@ -78,7 +70,10 @@ class BridgeHandler(MQTTEndpoint):
     def _send(self, data):
         with self._send_lock:
             if not self._closed:
-                self.sock.sendall(data)
+                try:
+                    self.sock.sendall(data)
+                except Exception as exc:
+                    _log.error("_send exc=%s", exc)
 
     def inject(self, topic, payload, qos):
         return self._inject_raw(topic, payload, qos)
@@ -88,20 +83,14 @@ class BridgeHandler(MQTTEndpoint):
 
     # --- protocole ---
     def _handle(self, ptype, flags, body):
-        # log 1st ... everything
-        _log.debug("RAW-HANDLE: <-- PUBLISH ptype=%s flags=%s body=%s", ptype, flags, body)
-
         if ptype == PT_CONNECT:
             info = emit_connect(self.state, body)
-            _log.debug("PT_CONNECT: info=%s", info)
             keepalive = info.get("keepalive", 0)
-            _log.debug("PT_CONNECT: keepalive=%s", keepalive)
             if keepalive > 0:
                 self.sock.settimeout(keepalive * 1.5)
             self._send(build_connack(0))
         elif ptype == PT_PUBLISH:
             topic, qos, pkt_id, payload = parse_publish_full(body, flags)
-            _log.debug("bridge: <-- PUBLISH topic=%s qos=%d payload=%s", topic, qos, payload[:100] if isinstance(payload, str) else payload)
             emit_message(self.state, "in", "PUBLISH", topic=topic, payload=payload, qos=qos)
             if qos == QOS_AT_LEAST_ONCE:
                 self._send(build_puback(pkt_id))

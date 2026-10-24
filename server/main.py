@@ -210,7 +210,7 @@ def _setup_ha_client(state, engine, args, config):
 
 def main(argv=None):
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.INFO,
         format="%(asctime)s %(name)s %(levelname)s %(message)s",
         datefmt="%H:%M:%S",
     )
